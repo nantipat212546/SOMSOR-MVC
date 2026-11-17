@@ -1,0 +1,23 @@
+const express=require('express');
+const helmet=require('helmet');
+const rateLimit=require('express-rate-limit');
+const path=require('path');
+const db=require('./config/database');
+const {initialize}=require('./models/setup');
+const {fail}=require('./utils/http');
+require('./config/secret');
+initialize(db);
+const app=express();
+app.use(helmet({contentSecurityPolicy:false}));
+app.use(express.json({limit:'30kb'}));
+app.use('/api/v1/auth',rateLimit({windowMs:15*60*1000,limit:30,standardHeaders:'draft-7',legacyHeaders:false}));
+app.use(express.static(path.join(__dirname,'public')));
+app.use('/api/v1/auth',require('./routes/authRoutes'));
+app.use('/api/v1/categories',require('./routes/categoryRoutes'));
+app.use('/api/v1/technicians',require('./routes/technicianRoutes'));
+app.use('/api/v1/requests',require('./routes/requestRoutes'));
+app.use('/api/v1/dashboard',require('./routes/dashboardRoutes'));
+app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
+app.use((err,req,res,next)=>{console.error(err);fail(res,500,'เกิดข้อผิดพลาดในระบบ')});
+if(require.main===module){app.listen(process.env.PORT||3000,()=>console.log('SOMSOR MVC running at http://localhost:'+(process.env.PORT||3000)))}
+module.exports=app;
